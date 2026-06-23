@@ -390,7 +390,7 @@ function draw(){
     ctx.font='12px '+FONT;ctx.fillStyle='rgba(255,255,255,0.85)';
     ctx.fillText('SPACE / TAP TO START',W/2,H/2+14);
     ctx.font='10px '+FONT;ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.fillText('HIGH SCORE: DAVE HEATWAVE',W/2,H/2+40);
+    ctx.fillText('HIGHEST SCORE EVER: DAVE HEATWAVE',W/2,H/2+40);
     ctx.textAlign='left';return;
   }
 
@@ -438,6 +438,8 @@ function draw(){
     const goFS=Math.round(H*0.082),midSky=Math.round(GROUND*0.42);
     ctx.textAlign='center';ctx.fillStyle='#FFFFFF';ctx.font=goFS+'px '+FONT;
     ctx.fillText('GAME',W/2,midSky);ctx.fillText('OVER',W/2,midSky+goFS+8);
+    ctx.font='12px '+FONT;ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.fillText('INSERT COIN(S) TO CONTINUE',W/2,H/2+14);
     ctx.textAlign='left';
   }
 }
