@@ -486,7 +486,8 @@ function drawSun(w){
 }
 function drawHUD(w){
   const col=w.night?'#CCCCFF':'#FFFFFF';
-  ctx.font=HUD_FS+'px '+FONT;ctx.fillStyle=col;
+  ctx.font=HUD_FS+'px '+FONT;
+  ctx.fillStyle=col;
   ctx.textAlign='left'; ctx.fillText('ANNIE',10,HUD_FS+6);
   ctx.textAlign='right'; ctx.fillText(String(Math.floor(S.score)).padStart(6,'0'),W-10,HUD_FS+6);
   ctx.textAlign='left';
@@ -593,7 +594,7 @@ function draw(){
     ctx.textAlign='center';ctx.fillStyle='#FFFFFF';ctx.font=goFS+'px '+FONT;
     ctx.fillText('GAME',W/2,midSky);ctx.fillText('OVER',W/2,midSky+goFS+8);
     ctx.font='12px '+FONT;ctx.fillStyle='rgba(255,255,255,0.85)';
-    ctx.fillText('TAP / SPACE TO PLAY AGAIN',W/2,H/2+14);
+    ctx.fillText('INSERT COIN(S) TO CONTINUE',W/2,H/2+14);
     ctx.textAlign='left';
   }
 }
