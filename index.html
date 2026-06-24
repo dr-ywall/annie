@@ -59,14 +59,18 @@ html, body {
           drop-shadow(0 0 90px rgba(20,40,160,0.15));
 }
 /* Canvas always 480x480 internal — CSS scales it for mobile without anti-aliasing */
+#gc {
+  width: min(480px, 100vmin);
+  height: min(480px, 100vmin);
+}
+
 #cv {
   display: block;
-  width: 480px;
-  height: 480px;
+  width: 100%;
+  height: 100%;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
-
 </style>
 </head>
 <body>
