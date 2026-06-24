@@ -14,23 +14,19 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body {
   background: #000;
+  height: 100%;
   margin: 0;
-  padding: 0;
-  width: 100%;
-  min-height: 100%;
-}
-body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding-top: max(0px, calc((100vh - 100vmin - 40px) / 2));
+  justify-content: center;
+  overflow: hidden;
 }
 #ui-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 480px;
+  width: min(480px, 100vmin);
   padding: 6px 10px 0;
   background: none;
   font-family: "Arcade", monospace;
@@ -47,9 +43,8 @@ body {
   opacity: 1; transition: opacity 0.15s;
 }
 #ui-bar .controls button.muted { opacity: 0.35; }
-@media (max-width: 520px) {
+@media (max-width: 500px) {
   #ui-bar {
-    width: 100vmin;
     font-size: 8px;
     padding: 4px 6px 0;
     letter-spacing: 0;
