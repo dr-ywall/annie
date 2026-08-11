@@ -458,22 +458,30 @@ function update(){
   popups=popups.filter(p=>p.life>0);
 }
 
-function rightmostObj(){
-  let rx=-999;
-  for(const o of S.obs) rx=Math.max(rx,o.x);
-  for(const c of S.cacti) rx=Math.max(rx,c.x);
-  return rx;
+function rightmostInfo(){
+  let rx=-999,isObstacle=false;
+  for(const o of S.obs) if(o.x>rx){rx=o.x;isObstacle=true;}
+  for(const c of S.cacti) if(c.x>rx){rx=c.x;isObstacle=false;}
+  return{x:rx,isObstacle};
 }
 const MIN_GAP=200;
+// Landing on an obstacle (arm/cart) triggers an automatic bounce the player
+// can't steer or cancel until they touch ground again. That recovery arc
+// covers ~155px (worst case: bouncing off a cart). OBSTACLE_GAP guarantees
+// the next hazard never spawns inside that uncontrollable flight path, so
+// going for the bonus landing is never an unavoidable death sentence.
+const OBSTACLE_GAP=280;
 function spawnObs(){
-  const x=Math.max(W+80, rightmostObj()+MIN_GAP);
+  const r=rightmostInfo(),gap=r.isObstacle?OBSTACLE_GAP:MIN_GAP;
+  const x=Math.max(W+80, r.x+gap);
   S.obs.push({x,type:getW().obstacleType,flipped:false,fTimer:0,animFrame:0,animTick:0});
   S.nObs=230+Math.random()*250;
 }
 function spawnCact(){
   const w=getW(),keys=w.cactusKeys;
   const key=keys[Math.floor(Math.random()*keys.length)];
-  const x=Math.max(W+60, rightmostObj()+MIN_GAP);
+  const r=rightmostInfo(),gap=r.isObstacle?OBSTACLE_GAP:MIN_GAP;
+  const x=Math.max(W+60, r.x+gap);
   S.cacti.push({x,passed:false,key});
   S.nCact=170+Math.random()*230;
 }
