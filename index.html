@@ -318,18 +318,45 @@ function titleWord(frame){
 let deathSpin = {active:false, angle:0, x:0, y:0};
 
 let S={screen:'title',worldIdx:0,score:0,hi:0,frame:0,worldStartFrame:0,speed:BASE_SPD,
-       player:null,obs:[],cacti:[],parts:[],nObs:150,nCact:210};
+       player:null,obs:[],cacti:[],parts:[],nObs:150,nCact:210,endingPage:0,endingFrame:0};
 
 function initP(){return{x:100,y:GROUND,vy:0,onGround:true,anim:0,aTick:0,dead:false,dTimer:0};}
 function resetGame(){
   Object.assign(S,{score:0,frame:0,worldStartFrame:0,speed:BASE_SPD,worldIdx:0,
-    obs:[],cacti:[],parts:[],nObs:150,nCact:210,player:initP()});
+    obs:[],cacti:[],parts:[],nObs:150,nCact:210,player:initP(),endingPage:0,endingFrame:0});
   sandOffset=0;resetClouds();frozen=null;popups=[];sunFlipFrame=0;
   deathSpin={active:false,angle:0,x:0,y:0};
   gc.className=WORLDS[S.worldIdx].night?'night':'day';
 }
 function getW(){return WORLDS[S.worldIdx];}
 
+// Ending sequence: shown once the last world (4-24) times out. Same typewriter
+// feel as the title screen, but click-through, page by page.
+const ENDING_PAGES=[
+  "Howdy, weird kid!",
+  "Don't you have something to do?",
+  "Something important...",
+  "...like finding Dave Heatwave?",
+  "or should we play again?",
+  "INSERT COIN(S) TO CONTINUE"
+];
+const ENDING_CHAR_FRAMES=3; // frames per revealed character
+function advanceEnding(){
+  const full=ENDING_PAGES[S.endingPage];
+  const shown=Math.floor(S.endingFrame/ENDING_CHAR_FRAMES);
+  if(shown<full.length){
+    S.endingFrame=full.length*ENDING_CHAR_FRAMES; // tap while typing -> reveal instantly
+    return;
+  }
+  if(S.endingPage<ENDING_PAGES.length-1){
+    S.endingPage++;S.endingFrame=0;
+  } else {
+    resetGame();
+    S.worldIdx=0;gc.className=WORLDS[0].night?'night':'day'; // always back to 4-20, even in debug builds
+    S.screen='playing';
+    AC.resume().then(()=>{ if(!musicMuted) startMusic(); }).catch(()=>{});
+  }
+}
 function act(){
   if(S.screen==='title'||S.screen==='dead'){
     resetGame();S.screen='playing';
@@ -337,6 +364,7 @@ function act(){
   }
   else if(S.screen==='playing') jump();
   else if(S.screen==='worldclear') advWorld();
+  else if(S.screen==='ending') advanceEnding();
 }
 function jump(){
   const p=S.player;
@@ -415,9 +443,15 @@ function update(){
   sandOffset=(sandOffset+S.speed)%W;
   updateClouds();
 
-  if(S.worldIdx<WORLDS.length-1&&(S.frame-S.worldStartFrame)===1800){
-    S.hi=Math.max(S.hi,Math.floor(S.score));S.score+=1000;
-    S.screen='worldclear';return;
+  if((S.frame-S.worldStartFrame)===1800){
+    if(S.worldIdx<WORLDS.length-1){
+      S.hi=Math.max(S.hi,Math.floor(S.score));S.score+=1000;
+      S.screen='worldclear';return;
+    } else {
+      S.hi=Math.max(S.hi,Math.floor(S.score));
+      S.screen='ending';S.endingPage=0;S.endingFrame=0;
+      return;
+    }
   }
 
   p.vy+=GRAVITY;p.y+=p.vy;
@@ -714,6 +748,24 @@ function draw(){
     ctx.fillStyle='#FFF';ctx.font='11px '+FONT;
     const nextW=WORLDS[(S.worldIdx+1)%WORLDS.length];
     ctx.fillText('SPACE / TAP  >>  '+(nextW.enterMsg||'CONTINUE'),W/2,H/2+56);
+    ctx.textAlign='left';
+  }
+
+  if(S.screen==='ending'){
+    S.endingFrame++;
+    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';
+    const full=ENDING_PAGES[S.endingPage];
+    const shown=Math.min(full.length,Math.floor(S.endingFrame/ENDING_CHAR_FRAMES));
+    const typing=shown<full.length;
+    let text=full.slice(0,shown);
+    if(typing&&Math.floor(S.endingFrame/15)%2===0) text+='_';
+    ctx.fillStyle='#FFF';ctx.font='12px '+FONT;
+    ctx.fillText(text,W/2,H/2-10);
+    if(!typing&&S.endingPage<ENDING_PAGES.length-1){
+      ctx.font='11px '+FONT;ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.fillText('SPACE / TAP',W/2,H/2+30);
+    }
     ctx.textAlign='left';
   }
 
