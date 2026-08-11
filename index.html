@@ -221,7 +221,8 @@ const WORLDS = [
     cactusKeys:['cactus_g','cactus_b','cactus_t'],
     skyTop:'#E8714A', skyBot:'#F0906A',
     groundColor:'#D4B84A', sandKey:'sand', clouds:true,
-    enterMsg:'DESERT DASH' },
+    enterMsg:'DESERT DASH',
+    sunHalfCut:true },
   { name:'4-21', night:true, obstacleType:'cart',
     cactusKeys:['cactus_g_night','cactus_b_night','cactus_t_night'],
     skyTop:'#06061C', skyBot:'#0A0A28',
@@ -231,13 +232,15 @@ const WORLDS = [
     cactusKeys:['cactus_g','cactus_b','cactus_t'],
     skyTop:'#E8714A', skyBot:'#F0906A',
     groundColor:'#D4B84A', sandKey:'sand', clouds:true,
-    enterMsg:'BACK TO THE SURFACE' },
+    enterMsg:'BACK TO THE SURFACE',
+    sunHalfCut:true },
   { name:'4-23', night:false, obstacleType:'arm',
     cactusKeys:['cactus_g','cactus_b','cactus_t'],
     skyTop:'#3A1F45', skyBot:'#E8632E',
     groundColor:'#7A4326', sandKey:'sand', clouds:true,
     enterMsg:'RIDE INTO THE SUNSET',
-    sunXFrac:0.86, sunYFrac:0.88, sunStatic:true }
+    sunXFrac:0.86, sunYFrac:0.93, sunStatic:true,
+    sunColor:'#FF7A45' }
 ];
 
 // Clouds: each tracks its own x independently to avoid gap/clip bugs
@@ -525,18 +528,54 @@ function drawClouds(w){
     ctx.drawImage(im,Math.round(cl.x),y,tw,th);
   });
 }
+const sunPixelCache={};
+function getPixelSun(baseColor){
+  if(sunPixelCache[baseColor]) return sunPixelCache[baseColor];
+  const N=16; // low native resolution, scaled up blocky like the other sprites
+  const oc=document.createElement('canvas');
+  oc.width=N;oc.height=N;
+  const octx=oc.getContext('2d');
+  const cx=(N-1)/2,cy=(N-1)/2,r=N/2-0.5;
+  octx.fillStyle=baseColor;
+  for(let yy=0;yy<N;yy++){
+    for(let xx=0;xx<N;xx++){
+      const dx=xx-cx,dy=yy-cy;
+      if(dx*dx+dy*dy<=r*r) octx.fillRect(xx,yy,1,1);
+    }
+  }
+  sunPixelCache[baseColor]=oc;
+  return oc;
+}
 function drawSun(w){
   if(w.night) return;
+  const th=Math.round(H*0.155);
+  const xFrac=w.sunXFrac!==undefined?w.sunXFrac:0.5;
+  let y;
+  if(w.sunHalfCut) y=-Math.round(th/2);
+  else if(w.sunYFrac!==undefined) y=Math.round(GROUND*w.sunYFrac);
+  else y=4;
+
+  if(w.sunColor){
+    // Sunset: flat, blocky pixel-art sphere (no gradient, no highlight) in a warm sunset color.
+    const r=th/2,cx=Math.round(W*xFrac),cy=y+r;
+    const spr=getPixelSun(w.sunColor);
+    ctx.save();
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(spr,Math.round(cx-r),Math.round(cy-r),Math.round(2*r),Math.round(2*r));
+    ctx.restore();
+    return;
+  }
+
   if(!IMG.sun||!IMG.sun.complete||!IMG.sun.naturalWidth) return;
   const[,sw,sh]=SRC.sun;
-  const th=Math.round(H*0.155),tw=Math.round(sw*(th/sh));
+  const tw=Math.round(sw*(th/sh));
   const doFlip=!w.sunStatic&&Math.floor(sunFlipFrame/90)%2===1;
-  const xFrac=w.sunXFrac!==undefined?w.sunXFrac:0.5;
   const x=Math.round(W*xFrac-tw/2);
-  const y=w.sunYFrac!==undefined?Math.round(GROUND*w.sunYFrac):4;
   ctx.save();
-  if(doFlip){ctx.translate(x+tw/2,y+th/2);ctx.scale(-1,1);ctx.drawImage(IMG.sun,-tw/2,-th/2,tw,th);}
-  else ctx.drawImage(IMG.sun,x,y,tw,th);
+  ctx.translate(x+tw/2,y+th/2);
+  if(w.sunHalfCut) ctx.rotate(3*Math.PI/180); // fixed tilt, purely aesthetic
+  if(doFlip) ctx.scale(-1,1);
+  ctx.drawImage(IMG.sun,-tw/2,-th/2,tw,th);
   ctx.restore();
 }
 function drawHUD(w){
