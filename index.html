@@ -220,11 +220,24 @@ const WORLDS = [
   { name:'4-20', night:false, obstacleType:'arm',
     cactusKeys:['cactus_g','cactus_b','cactus_t'],
     skyTop:'#E8714A', skyBot:'#F0906A',
-    groundColor:'#D4B84A', sandKey:'sand', clouds:true },
+    groundColor:'#D4B84A', sandKey:'sand', clouds:true,
+    enterMsg:'DESERT DASH' },
   { name:'4-21', night:true, obstacleType:'cart',
     cactusKeys:['cactus_g_night','cactus_b_night','cactus_t_night'],
     skyTop:'#06061C', skyBot:'#0A0A28',
-    groundColor:'#18203A', sandKey:'sand_night', clouds:false }
+    groundColor:'#18203A', sandKey:'sand_night', clouds:false,
+    enterMsg:'ENTER THE MINES' },
+  { name:'4-22', night:false, obstacleType:'arm',
+    cactusKeys:['cactus_g','cactus_b','cactus_t'],
+    skyTop:'#E8714A', skyBot:'#F0906A',
+    groundColor:'#D4B84A', sandKey:'sand', clouds:true,
+    enterMsg:'BACK TO THE SURFACE' },
+  { name:'4-23', night:false, obstacleType:'arm',
+    cactusKeys:['cactus_g','cactus_b','cactus_t'],
+    skyTop:'#3A1F45', skyBot:'#E8632E',
+    groundColor:'#7A4326', sandKey:'sand', clouds:true,
+    enterMsg:'RIDE INTO THE SUNSET',
+    sunXFrac:0.86, sunYFrac:0.88, sunStatic:true }
 ];
 
 // Clouds: each tracks its own x independently to avoid gap/clip bugs
@@ -261,16 +274,43 @@ function drawSprEx(key,feetX,feetY,targetH,flipV,flipH){
 }
 function drawSpr(key,fx,fy,th){drawSprEx(key,fx,fy,th,false,false);}
 
-let sunFlipFrame=0,sandOffset=0,popups=[],frozen=null;
+let sunFlipFrame=0,sandOffset=0,popups=[],frozen=null,titleFrame=0;
+
+// Title screen typo-correction gag: "AUNTIE" backspaces letter-by-letter into "ANNIE"
+const TITLE_WRONG='AUNTIE', TITLE_RIGHT='ANNIE';
+const TITLE_HOLD_WRONG=90, TITLE_DEL_PER=6, TITLE_PAUSE=20, TITLE_TYPE_PER=7, TITLE_HOLD_RIGHT=240;
+const TITLE_P1=TITLE_HOLD_WRONG;
+const TITLE_P2=TITLE_P1+TITLE_WRONG.length*TITLE_DEL_PER;
+const TITLE_P3=TITLE_P2+TITLE_PAUSE;
+const TITLE_P4=TITLE_P3+TITLE_RIGHT.length*TITLE_TYPE_PER;
+const TITLE_CYCLE=TITLE_P4+TITLE_HOLD_RIGHT;
+function titleWord(frame){
+  const t=frame%TITLE_CYCLE;
+  let word,cursor=false;
+  if(t<TITLE_P1){ word=TITLE_WRONG; }
+  else if(t<TITLE_P2){
+    const del=Math.floor((t-TITLE_P1)/TITLE_DEL_PER)+1;
+    word=TITLE_WRONG.slice(0,Math.max(0,TITLE_WRONG.length-del));
+    cursor=true;
+  } else if(t<TITLE_P3){
+    word=''; cursor=true;
+  } else if(t<TITLE_P4){
+    const typed=Math.floor((t-TITLE_P3)/TITLE_TYPE_PER)+1;
+    word=TITLE_RIGHT.slice(0,Math.min(TITLE_RIGHT.length,typed));
+    cursor=true;
+  } else { word=TITLE_RIGHT; }
+  if(cursor&&Math.floor(frame/15)%2===0) word+='_';
+  return word;
+}
 // Death spin state
 let deathSpin = {active:false, angle:0, x:0, y:0};
 
-let S={screen:'title',worldIdx:0,score:0,hi:0,frame:0,speed:BASE_SPD,
+let S={screen:'title',worldIdx:0,score:0,hi:0,frame:0,worldStartFrame:0,speed:BASE_SPD,
        player:null,obs:[],cacti:[],parts:[],nObs:150,nCact:210};
 
 function initP(){return{x:100,y:GROUND,vy:0,onGround:true,anim:0,aTick:0,dead:false,dTimer:0};}
 function resetGame(){
-  Object.assign(S,{score:0,frame:0,speed:BASE_SPD,worldIdx:0,
+  Object.assign(S,{score:0,frame:0,worldStartFrame:0,speed:BASE_SPD,worldIdx:0,
     obs:[],cacti:[],parts:[],nObs:150,nCact:210,player:initP()});
   sandOffset=0;resetClouds();frozen=null;popups=[];sunFlipFrame=0;
   deathSpin={active:false,angle:0,x:0,y:0};
@@ -293,6 +333,7 @@ function jump(){
 function advWorld(){
   S.worldIdx=(S.worldIdx+1)%WORLDS.length;
   S.obs=[];S.cacti=[];S.nObs=200;S.nCact=210;
+  S.worldStartFrame=S.frame;
   S.screen='playing';gc.className=WORLDS[S.worldIdx].night?'night':'day';
 }
 document.addEventListener('keydown',e=>{
@@ -358,7 +399,7 @@ function update(){
   sandOffset=(sandOffset+S.speed)%W;
   updateClouds();
 
-  if(S.worldIdx===0&&S.frame===1800){
+  if(S.worldIdx<WORLDS.length-1&&(S.frame-S.worldStartFrame)===1800){
     S.hi=Math.max(S.hi,Math.floor(S.score));S.score+=1000;
     S.screen='worldclear';return;
   }
@@ -481,8 +522,10 @@ function drawSun(w){
   if(!IMG.sun||!IMG.sun.complete||!IMG.sun.naturalWidth) return;
   const[,sw,sh]=SRC.sun;
   const th=Math.round(H*0.155),tw=Math.round(sw*(th/sh));
-  const doFlip=Math.floor(sunFlipFrame/90)%2===1;
-  const x=Math.round(W/2-tw/2),y=4;
+  const doFlip=!w.sunStatic&&Math.floor(sunFlipFrame/90)%2===1;
+  const xFrac=w.sunXFrac!==undefined?w.sunXFrac:0.5;
+  const x=Math.round(W*xFrac-tw/2);
+  const y=w.sunYFrac!==undefined?Math.round(GROUND*w.sunYFrac):4;
   ctx.save();
   if(doFlip){ctx.translate(x+tw/2,y+th/2);ctx.scale(-1,1);ctx.drawImage(IMG.sun,-tw/2,-th/2,tw,th);}
   else ctx.drawImage(IMG.sun,x,y,tw,th);
@@ -544,7 +587,8 @@ function draw(){
     ctx.fillStyle='rgba(0,0,0,0.40)';ctx.fillRect(0,0,W,H);
     ctx.textAlign='center';
     ctx.fillStyle='#FFF';ctx.font='12px '+FONT;
-    ctx.fillText("AUNTIE ARIZONA'S DESERT DASH",W/2,H/2-28);
+    titleFrame++;
+    ctx.fillText(titleWord(titleFrame)+" ARIZONA'S DESERT DASH",W/2,H/2-28);
     ctx.font='12px '+FONT;ctx.fillStyle='rgba(255,255,255,0.85)';
     ctx.fillText('SPACE / TAP TO START',W/2,H/2+14);
     
@@ -580,11 +624,12 @@ function draw(){
     ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
     ctx.textAlign='center';
     ctx.fillStyle='#F5C518';ctx.font='normal 24px '+FONT;
-    ctx.fillText('WORLD '+WORLDS[0].name+' CLEAR!',W/2,H/2-18);
+    ctx.fillText('WORLD '+WORLDS[S.worldIdx].name+' CLEAR!',W/2,H/2-18);
     ctx.fillStyle='#FFD700';ctx.font='normal 20px '+FONT;
     ctx.fillText('+1000',W/2,H/2+20);
     ctx.fillStyle='#FFF';ctx.font='11px '+FONT;
-    ctx.fillText('SPACE / TAP  >>  ENTER THE MINES',W/2,H/2+56);
+    const nextW=WORLDS[(S.worldIdx+1)%WORLDS.length];
+    ctx.fillText('SPACE / TAP  >>  '+(nextW.enterMsg||'CONTINUE'),W/2,H/2+56);
     ctx.textAlign='left';
   }
 
